@@ -16,7 +16,7 @@ dnf remove -y origin-clients-3.11.1-1.fc29.x86_64
 
 if [ ! -f /root/.ssh/id_rsa.pub ]
 then
-   echo "id_rsa tuple must exists, Generating"
+   echo "id_rsa tuple must exist, generating"
    ssh-keygen -t rsa -f /root/.ssh/id_rsa -N ''
 fi
 
@@ -44,8 +44,27 @@ else
    cp $CUSTOM_IMAGE custom-worker-1.img
 fi
 
-virt-customize -a custom-worker-1.img --root-password password:123456 --ssh-inject root:file:/root/.ssh/id_rsa.pub --selinux-relabel --timezone Europe/Berlin --hostname $NETLIST-worker-1 --uninstall cloud-init,kexec-tools,postfix
-virt-install --name $NETLIST-worker-1 --description "$NETLIST-worker-1" --os-type=linux --os-variant=rhel7.6 --vcpus=4 --ram 7168 --rng /dev/urandom --import --disk custom-worker-1.img --network network=$NETLIST --check all=off --connect qemu:///system --graphics none -m 52:54:00:72:5c:30 --noautoconsole --cpu host-passthrough
+virt-customize -a custom-worker-1.img \
+               --root-password password:123456 \
+               --ssh-inject root:file:/root/.ssh/id_rsa.pub \
+               --selinux-relabel \
+               --timezone Europe/Berlin \
+               --hostname $NETLIST-worker-1 \
+               --uninstall cloud-init,kexec-tools,postfix
+virt-install --name $NETLIST-worker-1 \
+             --description "$NETLIST-worker-1" \
+             --os-type=linux \
+             --os-variant=rhel7.6 \
+             --vcpus=4 \
+             --ram 7168 \
+             --rng /dev/urandom \
+             --import --disk custom-worker-1.img \
+             --network network=$NETLIST \
+             --check all=off \
+             --connect qemu:///system \
+             --graphics none -m 52:54:00:72:5c:30 \
+             --noautoconsole \
+             --cpu host-passthrough
 
 function getip {
   IP=$(virsh domifaddr $NETLIST-worker-1  | awk '{ print $4 }' | tail -2 | head -1 | awk -F/ '{print $1}')

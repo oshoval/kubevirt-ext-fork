@@ -17,18 +17,26 @@ CONTAINER_MODE=${CONTAINER_MODE:-"1"}
 
 CONTAINER=$(docker ps | grep kubevirt | grep $KUBEVIRT_PROVIDER | awk '{print $1}')
 
+function download_image {
+   if [ ! -f ~/$1 ]; then
+       curl $BASE_URL/$1 --output ~/$1
+   fi
+}
+
+function copy_image_to_container {
+   docker exec $CONTAINER bash -c "ls /tmp/$2"
+   RET=$(echo $?)
+   if [ $RET != "0" ]; then
+      docker cp ~/$1 $CONTAINER:/tmp/$2
+   fi
+}
+
 # Download (if needed) the image, and copy it to the container
 if [ $CUSTOM_IMAGE = "0" ] || [ $PROVISION_MODE = "1" ]; then
-   if [ ! -f ~/$BASE_IMAGE ]; then
-       curl $BASE_URL/$BASE_IMAGE --output ~/$BASE_IMAGE
-   fi
+   download_image $BASE_IMAGE
 
    if [ $CONTAINER_MODE = "1" ]; then
-      docker exec $CONTAINER bash -c "ls /tmp/base.img"
-      RET=$(echo $?)
-      if [ $RET != "0" ]; then
-         docker cp ~/$BASE_IMAGE $CONTAINER:/tmp/base.img
-      fi
+      copy_image_to_container $BASE_IMAGE "base.img"
    else
       cp ~/$BASE_IMAGE /tmp/base.img
    fi
@@ -46,11 +54,8 @@ else
          curl $BASE_URL/$CUSTOM_IMAGE --output ~/$CUSTOM_IMAGE
        fi
    fi
-   docker exec $CONTAINER bash -c "ls /tmp/$CUSTOM_IMAGE"
-   RET=$(echo $?)
-   if [ $RET != "0" ]; then
-     docker cp ~/$CUSTOM_IMAGE $CONTAINER:/tmp
-   fi
+
+   copy_image_to_container $CUSTOM_IMAGE $CUSTOM_IMAGE
 fi
 
 if [ $CONTAINER_MODE = "1" ]; then
